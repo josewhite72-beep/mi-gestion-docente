@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestión Docente Panamá</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        h1 { 
+            color: #2c3e50; 
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #2980b9, #3498db);
+        }
+        .resultado {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            text-align: center;
+        }
+        .nota {
+            font-size: 2em;
+            font-weight: bold;
+            color: #27ae60;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #2c3e50;
+            color: white;
+        }
+        .badge {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #3498db;
+            margin: 20px 0;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #f1f1f1;
+            cursor: pointer;
+            border-right: 1px solid #ddd;
+        }
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Gestión Docente - Panamá</h1>
+        
+        <div class="card">
+            <h3>📊 Fórmula Panameña</h3>
+            <h2>[(Puntos Obtenidos ÷ Puntos Totales) × 4] + 1</h2>
+            <p>Escala: 1.0 (mínimo) - 5.0 (máximo)</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="abrirTab('calculadora')">Calculadora</div>
+            <div class="tab" onclick="abrirTab('importar')">Importar</div>
+            <div class="tab" onclick="abrirTab('estudiantes')">Estudiantes</div>
+        </div>
+        
+        <!-- CALCULADORA -->
+        <div id="calculadora" class="tab-content active">
+            <h3>🧮 Calculadora de Notas</h3>
+            <input type="number" id="puntosObtenidos" placeholder="Puntos obtenidos" value="85" step="0.1">
+            <input type="number" id="puntosTotales" placeholder="Puntos totales" value="100" step="0.1">
+            <button onclick="calcularNota()">Calcular Nota</button>
+            
+            <div id="resultado" class="resultado" style="display:none">
+                <h4>Resultado:</h4>
+                <div class="nota" id="notaResultado">0.0</div>
+                <p id="formulaTexto"></p>
+            </div>
+        </div>
+        
+        <!-- IMPORTAR -->
+        <div id="importar" class="tab-content">
+            <h3>📁 Importar Estudiantes (CSV)</h3>
+            <input type="file" id="csvFile" accept=".csv">
+            <button onclick="importarCSV()">Importar CSV</button>
+            <p><small>Formato: codigo,apellidos,nombres,cedula,grupo</small></p>
+            <div id="csvResultado"></div>
+        </div>
+        
+        <!-- ESTUDIANTES -->
+        <div id="estudiantes" class="tab-content">
+            <h3>👥 Lista de Estudiantes</h3>
+            <button onclick="cargarEstudiantes()">Cargar Estudiantes</button>
+            <div id="listaEstudiantes"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        
+        function abrirTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector(`.tab[onclick="abrirTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+        
+        async function calcularNota() {
+            const puntos = document.getElementById('puntosObtenidos').value;
+            const total = document.getElementById('puntosTotales').value;
+            
+            if (!puntos || puntos <= 0) {
+                alert('Ingresa puntos obtenidos válidos');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/calcular/${puntos}/${total}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                document.getElementById('notaResultado').textContent = data.nota;
+                document.getElementById('formulaTexto').textContent = data.formula;
+                document.getElementById('resultado').style.display = 'block';
+                
+                // Color según nota
+                const notaElement = document.getElementById('notaResultado');
+                if (data.nota >= 4.0) {
+                    notaElement.style.color = '#27ae60'; // Verde
+                } else if (data.nota >= 3.0) {
+                    notaElement.style.color = '#f39c12'; // Naranja
+                } else {
+                    notaElement.style.color = '#e74c3c'; // Rojo
+                }
+                
+            } catch (error) {
+                alert('Error: ' + error);
+            }
+        }
+        
+        async function importarCSV() {
+            const fileInput = document.getElementById('csvFile');
+            if (!fileInput.files.length) {
+                alert('Selecciona un archivo CSV');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            try {
+                const response = await fetch(`${API_URL}/importar-csv`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                document.getElementById('csvResultado').innerHTML = 
+                    `<div style="background:#d4edda;color:#155724;padding:10px;border-radius:5px;">
+                        ${data.mensaje || data.error}
+                    </div>`;
+                
+                // Limpiar archivo
+                fileInput.value = '';
+                
+            } catch (error) {
+                alert('Error: ' + error);
+            }
+        }
+        
+        async function cargarEstudiantes() {
+            try {
+                const response = await fetch(`${API_URL}/estudiantes`);
+                const data = await response.json();
+                
+                if (data.estudiantes.length === 0) {
+                    document.getElementById('listaEstudiantes').innerHTML = 
+                        '<p>No hay estudiantes registrados</p>';
+                    return;
+                }
+                
+                let html = '<table>';
+                html += '<tr><th>Código</th><th>Apellidos</th><th>Nombres</th><th>Grupo</th></tr>';
+                
+                data.estudiantes.forEach(est => {
+                    html += `<tr>
+                        <td>${est.codigo || 'N/A'}</td>
+                        <td>${est.apellidos}</td>
+                        <td>${est.nombres}</td>
+                        <td><span class="badge">${est.grupo}</span></td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                document.getElementById('listaEstudiantes').innerHTML = html;
+                
+            } catch (error) {
+                alert('Error cargando estudiantes: ' + error);
+            }
+        }
+        
+        // Ejecutar calculadora al cargar
+        window.onload = function() {
+            calcularNota();
+        };
+    </script>
+</body>
+</html>
